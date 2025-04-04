@@ -8,25 +8,26 @@ import pymongo
 import pytz
 import os
 from datetime import datetime
+import shutil
 
-# Check if running in GitHub Actions (use default Chrome)
+# Detect environment and set ChromeDriver path
 is_github_actions = os.getenv("GITHUB_ACTIONS") == "true"
 
 if is_github_actions:
-    chrome_driver_path = "chromedriver"  # Use default ChromeDriver in GitHub
+    # Use the built-in ChromeDriver in GitHub Actions
+    chrome_driver_path = shutil.which("chromedriver")
     options = webdriver.ChromeOptions()
-    options.add_argument("--headless")  # Run in headless mode in GitHub
+    options.add_argument("--headless")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     service = Service(chrome_driver_path)
 else:
-    # Local execution with Brave Browser
+    # Local development (example using Brave browser)
     brave_path = r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe"
     chrome_driver_path = r"C:\Users\harsh\Downloads\chromedriver-win64\chromedriver.exe"
-
     options = webdriver.ChromeOptions()
     options.binary_location = brave_path
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     service = Service(chrome_driver_path)
@@ -43,18 +44,19 @@ try:
     WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.CSS_SELECTOR, "table"))
     )
-    print("Page loaded successfully")
-except:
-    print("Timeout: Page did not load properly")
+    print("✅ Page loaded successfully")
+except Exception as e:
+    print(f"❌ Timeout: Page did not load properly - {e}")
     driver.quit()
+    exit()
 
-# Locate table rows
+# Scrape the data
 rows = driver.find_elements(By.CSS_SELECTOR, "tbody tr")
-
 data = []
+
 for index, row in enumerate(rows):
     try:
-        name = row.find_element(By.CSS_SELECTOR, "td div div p").text.strip()  # New selector
+        name = row.find_element(By.CSS_SELECTOR, "td div div p").text.strip()
         price = row.find_element(By.CSS_SELECTOR, "td:nth-child(3)").text.strip()
         change = row.find_element(By.CSS_SELECTOR, "td:nth-child(4)").text.strip()
         volume = row.find_element(By.CSS_SELECTOR, "td:nth-child(5)").text.strip()
@@ -70,10 +72,9 @@ for index, row in enumerate(rows):
         })
 
         print(f" Row {index+1} extracted: {name} - {price}")
-
     except Exception as e:
         print(f" Skipped Row {index+1} due to error: {e}")
-        continue  # Skip problematic rows
+        continue
 
 # Close the browser
 driver.quit()
@@ -89,12 +90,12 @@ else:
 # Save to MongoDB Atlas
 try:
     if data:
-        mongo_uri = os.getenv("MONGO_URI")  # Load from GitHub Secrets
+        mongo_uri = os.getenv("MONGO_URI")  # Loaded from GitHub Secrets
         client = pymongo.MongoClient(mongo_uri)
         db = client["crypto_db"]
         collection = db["crypto_prices"]
         collection.insert_many(data)
-        print("Data inserted into MongoDB Atlas")
+        print(" Data inserted into MongoDB Atlas")
     else:
         print("No data found to insert into MongoDB.")
 except Exception as mongo_err:
