@@ -18,21 +18,13 @@ jobs:
       with:
         python-version: '3.9'
 
-    - name: Install Google Chrome
+    - name: Set Up ChromeDriver (Pre-installed)
       run: |
-        sudo apt update
-        sudo apt install -y google-chrome-stable
+        echo "Using pre-installed Google Chrome & ChromeDriver"
+        google-chrome --version
+        chromedriver --version
 
-    - name: Install ChromeDriver
-      run: |
-        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1)
-        DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-        wget -N https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
-        unzip chromedriver_linux64.zip
-        sudo mv chromedriver /usr/local/bin/
-        chmod +x /usr/local/bin/chromedriver
-
-    - name:  Install Dependencies
+    - name: Install Python Dependencies
       run: pip install selenium pandas pymongo pytz
 
     - name: Run Selenium Script
