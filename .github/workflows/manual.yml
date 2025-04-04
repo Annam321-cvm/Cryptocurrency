@@ -1,0 +1,41 @@
+name: Crypto Scraper Automation
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # Runs every 10 minutes
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  scrape_and_store:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install Google Chrome
+      run: |
+        sudo apt update
+        sudo apt install -y google-chrome-stable
+
+    - name: Install ChromeDriver
+      run: |
+        CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d'.' -f1)
+        DRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
+        wget -N https://chromedriver.storage.googleapis.com/$DRIVER_VERSION/chromedriver_linux64.zip
+        unzip chromedriver_linux64.zip
+        sudo mv chromedriver /usr/local/bin/
+        chmod +x /usr/local/bin/chromedriver
+
+    - name:  Install Dependencies
+      run: pip install selenium pandas pymongo pytz
+
+    - name: Run Selenium Script
+      env:
+        MONGO_URI: ${{ secrets.MONGO_URI }}  # Using GitHub Secrets
+      run: python scraper.py
